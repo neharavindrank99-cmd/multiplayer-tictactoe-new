@@ -1,1 +1,251 @@
+<!DOCTYPE html>
 
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Multiplayer Tic-Tac-Toe</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-family: Arial, sans-serif;
+      background: #f2f4f8;
+    }
+
+    .game {
+      width: 90%;
+      max-width: 420px;
+      background: white;
+      padding: 30px;
+      border-radius: 20px;
+      text-align: center;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+    }
+
+    h1 {
+      margin-top: 0;
+    }
+
+    input {
+      width: 100%;
+      padding: 14px;
+      margin: 8px 0;
+      font-size: 18px;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      text-align: center;
+    }
+
+    button {
+      width: 100%;
+      padding: 14px;
+      margin-top: 8px;
+      font-size: 18px;
+      font-weight: bold;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      background: #222;
+      color: white;
+    }
+
+    button:hover {
+      opacity: 0.85;
+    }
+
+    #gameArea {
+      display: none;
+    }
+
+    #board {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-top: 20px;
+    }
+
+    .cell {
+      aspect-ratio: 1;
+      font-size: 42px;
+      font-weight: bold;
+      background: #eee;
+      color: #222;
+      margin: 0;
+    }
+
+    #status {
+      margin: 15px 0;
+      font-size: 18px;
+      font-weight: bold;
+    }
+
+    #roomInfo {
+      font-size: 16px;
+      margin-bottom: 10px;
+    }
+  </style>
+
+</head>
+
+<body>
+
+  <div class="game">
+
+```
+<div id="lobby">
+  <h1>🎮 Tic-Tac-Toe</h1>
+
+  <p>Enter a room code to play with a friend.</p>
+
+  <input
+    id="roomCode"
+    placeholder="Room code"
+    maxlength="10"
+  >
+
+  <button onclick="joinGame()">
+    Join Game
+  </button>
+
+  <p id="message"></p>
+</div>
+
+<div id="gameArea">
+
+  <h1>🎮 Tic-Tac-Toe</h1>
+
+  <div id="roomInfo"></div>
+
+  <div id="status">
+    Waiting for another player...
+  </div>
+
+  <div id="board">
+    <button class="cell" onclick="makeMove(0)"></button>
+    <button class="cell" onclick="makeMove(1)"></button>
+    <button class="cell" onclick="makeMove(2)"></button>
+    <button class="cell" onclick="makeMove(3)"></button>
+    <button class="cell" onclick="makeMove(4)"></button>
+    <button class="cell" onclick="makeMove(5)"></button>
+    <button class="cell" onclick="makeMove(6)"></button>
+    <button class="cell" onclick="makeMove(7)"></button>
+    <button class="cell" onclick="makeMove(8)"></button>
+  </div>
+
+</div>
+```
+
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+
+  <script>
+    const socket = io();
+
+    let mySymbol = "";
+    let currentTurn = "X";
+
+    const cells = document.querySelectorAll(".cell");
+    const status = document.getElementById("status");
+    const message = document.getElementById("message");
+    const lobby = document.getElementById("lobby");
+    const gameArea = document.getElementById("gameArea");
+    const roomInfo = document.getElementById("roomInfo");
+
+    function joinGame() {
+      const roomCode =
+        document.getElementById("roomCode").value.trim();
+
+      if (!roomCode) {
+        message.textContent = "Please enter a room code.";
+        return;
+      }
+
+      socket.emit("joinRoom", roomCode);
+    }
+
+    socket.on("joined", (data) => {
+      mySymbol = data.symbol;
+      currentTurn = data.turn;
+
+      lobby.style.display = "none";
+      gameArea.style.display = "block";
+
+      roomInfo.textContent =
+        "You are player " + mySymbol;
+
+      updateBoard(data.board);
+      updateStatus();
+    });
+
+    socket.on("playersUpdate", (data) => {
+      if (data.count < 2) {
+        status.textContent =
+          "Waiting for another player...";
+      }
+    });
+
+    socket.on("gameStart", () => {
+      updateStatus();
+    });
+
+    socket.on("gameUpdate", (data) => {
+      currentTurn = data.turn;
+
+      updateBoard(data.board);
+
+      if (data.winner === "X" || data.winner === "O") {
+        if (data.winner === mySymbol) {
+          status.textContent = "🎉 You won!";
+        } else {
+          status.textContent = "😢 You lost!";
+        }
+      } else if (data.winner === "DRAW") {
+        status.textContent = "🤝 It's a draw!";
+      } else {
+        updateStatus();
+      }
+    });
+
+    socket.on("roomFull", () => {
+      message.textContent =
+        "That room already has two players.";
+    });
+
+    socket.on("playerLeft", () => {
+      status.textContent =
+        "The other player left the game.";
+    });
+
+    function makeMove(index) {
+      socket.emit("makeMove", index);
+    }
+
+    function updateBoard(board) {
+      cells.forEach((cell, index) => {
+        cell.textContent = board[index];
+
+        cell.disabled = board[index] !== "";
+      });
+    }
+
+    function updateStatus() {
+      if (currentTurn === mySymbol) {
+        status.textContent = "Your turn!";
+      } else {
+        status.textContent = "Opponent's turn...";
+      }
+    }
+  </script>
+
+</body>
+</html>
