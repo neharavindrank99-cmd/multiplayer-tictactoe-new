@@ -1,0 +1,13 @@
+{
+  "name": "multiplayer-tictactoe",
+  "version": "1.0.0",
+  "description": "Multiplayer Tic-Tac-Toe game",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "socket.io": "^4.8.1"
+  }
+}
